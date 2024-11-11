@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Include Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Include Moment.js (for date handling) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+    <!-- Include Chart.js Moment.js adapter -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@1.0.0"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
+
+    <style>
+        /* Center the canvas and set width and height */
+        #chart-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 80vh;
+            /* 80% of the viewport height */
+            width: 100%;
+            margin: 20px 0;
+            border: 2px solid black;
+            border-radius: 15px;
+            padding: 30px;
+            margin-left: 20px;
+            margin-top: 20px;
+            background-color: aliceblue;
+        }
+
+        /* Set the specific width and height for the canvas */
+        canvas {
+            width: 90vw;
+            /* 80% of the viewport width */
+            height: 35vh;
+            /* 60% of the viewport height */
+        }
+
+        /* Optional: Adjust the position of the chart */
+        body {
+            display: flex;
+            flex-direction: column;
+            height: 100px;
+            width: 600px;
+            margin: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="chart-container">
+        <canvas id="myChart"></canvas> <!-- Canvas element for Chart.js -->
+    </div>
+
+    <script>
+        var ctx = document.getElementById('myChart').getContext('2d');
+        var chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [], // Timestamps or data labels
+                datasets: [
+                    {
+                        label: 'RH Value',
+                        backgroundColor: 'rgba(0, 99, 132, 0.6)',
+                        borderColor: 'rgba(0, 99, 132, 1)',
+                        data: [] // Values will be pushed here dynamically
+                    },
+                    {
+                        label: 'Temp Value',
+                        backgroundColor: 'rgba(99, 132, 0, 0.6)',
+                        borderColor: 'rgba(99, 132, 0, 1)',
+                        data: [] // Counter values
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false, // Let the chart take the defined canvas size
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Spinning2', // Set the title text
+                        position: 'top',
+                        padding: {
+                            top: 2, // Padding from the top
+                            bottom: 20, // Padding from the bottom
+                        },
+                        font: {
+                            size: 20, // Set the font size
+                            weight: 'bold', // Set the font weight
+                            family: 'Arial', // Optionally set a specific font family
+                        },
+                        color: 'black', // Set the font color directly here
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'second',  // Set the time interval to seconds
+                            stepSize: 5,     // Set step size to 5 seconds
+                        },
+                        ticks: {
+                            autoSkip: true,
+                            maxTicksLimit: 10, // Limit the number of ticks displayed
+                            callback: function (value) {
+                                return moment(value).format('HH:mm:ss'); // Format without AM/PM
+                            }
+                        }
+                    },
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+
+        });
+
+        var socket = io.connect('http://127.0.0.1:7000'); // Connect to Socket.IO
+
+        socket.on('update', function (data) {
+            console.log('Data received: ', data); // Debugging: check console for data
+            var currentTime = new Date(); // Use Date object for timestamps
+
+            // Add new data points to chart
+            chart.data.labels.push(currentTime);
+            chart.data.datasets[0].data.push(data.Spg2_iVa_Act_RH);    // Random Value
+            chart.data.datasets[1].data.push(data.Spg2_iVa_Act_Temp);   // Counter Valu
+
+            // Keep only the last 20 data points
+            if (chart.data.labels.length > 20) {
+                chart.data.labels.shift();
+                chart.data.datasets.forEach(dataset => dataset.data.shift());
+            }
+            chart.update();
+        });
+    </script>
+</body>
+
+</html>
